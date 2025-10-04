@@ -1,0 +1,1 @@
+# pinata-nft-cli
