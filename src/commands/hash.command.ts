@@ -1,0 +1,63 @@
+/**
+ * GPLv2.0 License
+ * Copyright (c) 2025 Robert Lindley
+ */
+
+import { Command } from 'commander';
+
+import { OutputPaths } from '../config/output-paths';
+import { HashProcessor } from '../core';
+import { CommandOptions } from '../types';
+import { BaseCommand } from './base.command';
+import { CommandBuilder } from './command-builder';
+
+type HashOptions = CommandOptions & { finalOutput?: string };
+
+/**
+ * Alternative implementation using CommandBuilder pattern
+ * This demonstrates how to use the CommandBuilder for cleaner command setup
+ */
+export class HashCommand extends BaseCommand {
+  constructor() {
+    super('hash', 'Calculate SHA-256 hashes for files in a folder (v2)');
+  }
+
+  public configure(program: Command): void {
+    const command = new CommandBuilder(this.commandName, this.description ?? '')
+      .addHashCalculationOptions(OutputPaths.FILES.fileHashes)
+      .setAction(async (...args: unknown[]) => {
+        const options: HashOptions = args[0] ?? {};
+        await this.execute(options);
+      })
+      .build();
+
+    program.addCommand(command);
+  }
+
+  private async execute(options: HashOptions): Promise<void> {
+    try {
+      this.validateOptions(options);
+      this.logger.info('Starting hash calculation process (v2)');
+
+      const processor = new HashProcessor(this.createRateLimitConfig(options));
+
+      const processingOptions = {
+        folderPath: options.folder || 'files',
+        outputPath: options.output || './output/file-hashes.json',
+      };
+
+      if (options.finalOutput) {
+        // Calculate both regular hashes and hash of hashes
+        const finalHash = await processor.processWithFinalHash(processingOptions, options.finalOutput);
+        this.logSuccess(`Hash calculation completed. Final hash: ${finalHash}`);
+      } else {
+        // Calculate only regular hashes
+        const hashMapping = await processor.process(processingOptions);
+        const fileCount = Object.keys(hashMapping).length;
+        this.logSuccess(`Hash calculation completed for ${fileCount} files`);
+      }
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+}

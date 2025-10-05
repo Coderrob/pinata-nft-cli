@@ -1,0 +1,22 @@
+{
+  // Match project Prettier/ESLint printWidth (120)
+  "editor.rulers": [120],
+
+  // Soft wrap long lines in the editor for easier reading
+  "editor.wordWrap": "on",
+  "editor.wordWrapColumn": 120,
+
+  // Use the workspace Prettier config and format on save
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+
+  // Show whitespace and long line guidance
+  "editor.renderWhitespace": "boundary",
+  "editor.renderControlCharacters": false,
+
+  // Use the local node (project) for the built-in terminal and debug
+  "terminal.integrated.defaultProfile.windows": "Git Bash"
+
+  // Note: ESLint auto-fix on save can be enabled if you have the ESLint extension
+  // installed. It's omitted here to avoid workspace schema warnings.
+}
