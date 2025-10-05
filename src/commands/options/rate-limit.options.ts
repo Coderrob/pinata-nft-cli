@@ -18,6 +18,22 @@
 
 import { Option } from 'commander';
 
+const parseInteger = (value: string): number => Number.parseInt(value, 10);
+
+const createNumericOption = (flags: string, description: string, defaultValue: number): Option => {
+  const option = new Option(flags, description);
+  const parser = (value: string): number => parseInteger(value);
+
+  option.argParser(parser);
+  option.default(defaultValue);
+
+  (option as unknown as { parseArg: (value: string, previous?: unknown) => number }).parseArg = (
+    value: string
+  ): number => parser(value);
+
+  return option;
+};
+
 /**
  * Rate limiting and concurrency options used across multiple commands
  */
@@ -25,21 +41,23 @@ export class RateLimitOptions {
   /**
    * Concurrent operations option - used by: upload files, hash, cid
    */
-  static readonly concurrent = new Option('-c, --concurrent <number>', 'Number of concurrent operations (1-10)')
-    .argParser(value => parseInt(value, 10))
-    .default(5);
+  static readonly concurrent = createNumericOption(
+    '-c, --concurrent <number>',
+    'Number of concurrent operations (1-10)',
+    5
+  );
 
   /**
    * Minimum time between operations option - used by: upload files
    */
-  static readonly minTime = new Option('--min-time <number>', 'Minimum time between uploads (ms)')
-    .argParser(value => parseInt(value, 10))
-    .default(3000);
+  static readonly minTime = createNumericOption('--min-time <number>', 'Minimum time between uploads (ms)', 3000);
 
   /**
    * Concurrent uploads specific option - used by: upload files
    */
-  static readonly concurrentUploads = new Option('-c, --concurrent <number>', 'Number of concurrent uploads (1-10)')
-    .argParser(value => parseInt(value, 10))
-    .default(1);
+  static readonly concurrentUploads = createNumericOption(
+    '-c, --concurrent <number>',
+    'Number of concurrent uploads (1-10)',
+    1
+  );
 }

@@ -25,8 +25,8 @@ export abstract class BaseCommand {
   protected readonly logger: Logger;
 
   constructor(
-    protected readonly commandName: string,
-    protected readonly description?: string
+    public readonly commandName: string,
+    public readonly description?: string
   ) {
     this.logger = new Logger(commandName);
   }

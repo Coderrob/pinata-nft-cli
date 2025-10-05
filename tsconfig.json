@@ -25,5 +25,5 @@
   },
   "exclude": ["node_modules", "coverage", "dist", "tests", "src/**/*.test.ts", "src/**/*.spec.ts"],
   "include": ["src/**/*"],
-  "typeRoots": ["node_modules/@types", "src/types/declarations"]
+  "typeRoots": ["node_modules/@types"]
 }
