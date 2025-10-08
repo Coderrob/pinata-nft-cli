@@ -33,8 +33,6 @@ describe('BaseCommand', () => {
   let originalEnv: Record<string, string | undefined>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-
     command = new TestCommand();
     originalEnv = { ...process.env };
   });

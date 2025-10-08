@@ -42,7 +42,7 @@ describe('StructuredLogger', () => {
     });
 
     it('should use LOG_LEVEL from environment if valid', () => {
-      process.env.LOG_LEVEL = 'error';
+      process.env.LOG_LEVEL = LogLevel.ERROR;
       const logger = new StructuredLogger('Test');
       expect(logger).toBeDefined();
     });

@@ -7,17 +7,23 @@ import { FileMapping, ProcessingOptions } from '../types';
 jest.mock('../services/file.service');
 jest.mock('../services/hash-calculator.service');
 
-const mockFileService = new FileService() as jest.Mocked<FileService>;
-const mockHashCalculatorService = new HashCalculatorService(new Bottleneck(), {}) as jest.Mocked<HashCalculatorService>;
-
-(FileService as jest.Mock).mockImplementation(() => mockFileService);
-(HashCalculatorService as jest.Mock).mockImplementation(() => mockHashCalculatorService);
-
 describe('HashProcessor', () => {
   let processor: HashProcessor;
 
-  beforeEach(() => {
+  const mockFileService = new FileService() as jest.Mocked<FileService>;
+  const mockHashCalculatorService = new HashCalculatorService(
+    new Bottleneck(),
+    {}
+  ) as jest.Mocked<HashCalculatorService>;
+
+  (FileService as jest.Mock).mockImplementation(() => mockFileService);
+  (HashCalculatorService as jest.Mock).mockImplementation(() => mockHashCalculatorService);
+
+  afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  beforeEach(() => {
     processor = new HashProcessor();
   });
 

@@ -47,6 +47,7 @@ describe('retryOnError', () => {
   });
 
   afterEach(() => {
+    jest.clearAllMocks();
     jest.useRealTimers();
   });
 

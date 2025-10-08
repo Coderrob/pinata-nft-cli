@@ -5,14 +5,17 @@ import { PinataConfig, ProcessingOptions, FolderUploadResult } from '../types';
 // Mock dependencies
 jest.mock('../services/pinata.service');
 
-const mockPinataService = new PinataService({} as PinataConfig) as jest.Mocked<PinataService>;
-(PinataService as jest.Mock).mockImplementation(() => mockPinataService);
-
 describe('FolderUploadProcessor', () => {
   let processor: FolderUploadProcessor;
 
-  beforeEach(() => {
+  const mockPinataService = new PinataService({} as PinataConfig) as jest.Mocked<PinataService>;
+  (PinataService as jest.Mock).mockImplementation(() => mockPinataService);
+
+  afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  beforeEach(() => {
     processor = new FolderUploadProcessor({ apiKey: 'test-key', apiSecret: 'test-secret' });
   });
 

@@ -15,6 +15,7 @@ describe('ConfigurationManager', () => {
   });
 
   afterEach(() => {
+    jest.clearAllMocks();
     manager.clear();
     logSpy.mockRestore();
     process.env = { ...originalEnv };

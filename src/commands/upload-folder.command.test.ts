@@ -75,10 +75,11 @@ describe('UploadFolderCommand', () => {
     }
   }
 
-  beforeEach(() => {
-    // Reset mocks
+  afterEach(() => {
     jest.clearAllMocks();
+  });
 
+  beforeEach(() => {
     // Create mock dependencies
     mockLogger = new MockLogger();
     mockConfigProvider = new MockConfigProvider();

@@ -19,11 +19,10 @@ describe('CommandBuilder', () => {
 
   beforeEach(() => {
     builder = new CommandBuilder('test', 'description');
-    jest.clearAllMocks();
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   const optionGroup = () => [new Option('--flag <value>', 'test option')];

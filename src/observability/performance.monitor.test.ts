@@ -26,10 +26,6 @@ describe('Performance Monitoring Utilities', () => {
     jest.clearAllMocks();
   });
 
-  beforeEach(() => {
-    // No setup needed for these simplified tests
-  });
-
   describe('monitorFunction', () => {
     it('should monitor a successful function', async () => {
       const fn = jest.fn().mockResolvedValue('success');

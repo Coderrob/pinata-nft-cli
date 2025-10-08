@@ -27,9 +27,6 @@ describe('HealthMonitor', () => {
   let mockRecordHealthCheck: jest.MockedFunction<() => void>;
 
   beforeEach(() => {
-    // Reset all mocks
-    jest.clearAllMocks();
-
     // Initialize mock references
     mockAxiosGet = axios.get as jest.MockedFunction<typeof axios.get>;
     mockFileUtilsAccess = FileUtils.access as jest.MockedFunction<typeof FileUtils.access>;

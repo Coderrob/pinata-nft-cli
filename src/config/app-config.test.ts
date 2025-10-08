@@ -33,13 +33,16 @@ const configurationModule = jest.requireMock('./configuration-manager') as {
   __mockInstance: MockedManager;
 };
 
-// eslint-disable-next-line no-underscore-dangle
-const mockInstance = configurationModule.__mockInstance;
-const getInstanceMock = configurationModule.ConfigurationManager.getInstance;
-
 describe('AppConfig', () => {
-  beforeEach(() => {
+  // eslint-disable-next-line no-underscore-dangle
+  const mockInstance = configurationModule.__mockInstance;
+  const getInstanceMock = configurationModule.ConfigurationManager.getInstance;
+
+  afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  beforeEach(() => {
     Object.values(mockInstance).forEach(mock => mock.mockReset());
     getInstanceMock.mockReturnValue(mockInstance);
   });

@@ -39,10 +39,11 @@ describe('HashCommand', () => {
 
   let testCommand: TestHashCommand;
 
-  beforeEach(() => {
-    // Reset mocks
+  afterEach(() => {
     jest.clearAllMocks();
+  });
 
+  beforeEach(() => {
     // Mock BaseCommand
     mockBaseCommand = {
       commandName: 'hash',

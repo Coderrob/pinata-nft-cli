@@ -13,13 +13,9 @@ jest.mock('../../observability', () => ({
 }));
 
 describe('handleErrors', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockLoggerError.mockClear();
-  });
-
   afterEach(() => {
     jest.clearAllMocks();
+    mockLoggerError.mockClear();
   });
 
   describe('synchronous methods', () => {

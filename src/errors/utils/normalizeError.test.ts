@@ -11,9 +11,12 @@ describe('normalizeError', () => {
     normalizeError: mockNormalizeError,
   };
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   beforeEach(() => {
     (ErrorHandler as jest.MockedClass<typeof ErrorHandler>).mockImplementation(() => mockErrorHandler as any);
-    jest.clearAllMocks();
   });
 
   it('should create ErrorHandler with default context and call normalizeError', () => {

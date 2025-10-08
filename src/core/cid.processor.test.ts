@@ -32,9 +32,11 @@ describe('CIDProcessor', () => {
   let mockCIDMapping: Record<string, string>;
   let sortedMapping: Record<string, string>;
 
-  beforeEach(() => {
+  afterEach(() => {
     jest.clearAllMocks();
+  });
 
+  beforeEach(() => {
     // Initialize fresh test data for each test
     mockOptions = {
       folderPath: '/test/folder',

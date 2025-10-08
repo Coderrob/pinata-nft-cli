@@ -47,6 +47,10 @@ describe('RateLimitedFileMappingService', () => {
   let service: TestRateLimitedFileMappingService;
   let mockRateLimiter: jest.Mocked<Bottleneck>;
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   beforeEach(() => {
     mockRateLimiter = new MockBottleneck() as jest.Mocked<Bottleneck>;
     mockRateLimiter.schedule = jest.fn().mockImplementation(fn => fn());
@@ -55,8 +59,6 @@ describe('RateLimitedFileMappingService', () => {
       fileReader: mockFileReader,
       logger: mockLoggerInstance,
     });
-
-    jest.clearAllMocks();
   });
 
   describe('processFiles', () => {

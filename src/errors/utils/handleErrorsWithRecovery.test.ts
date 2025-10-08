@@ -29,7 +29,7 @@ function createDecoratedTestClass(throwable: unknown, config?: ErrorRecoveryConf
 }
 
 describe('handleErrorsWithRecovery', () => {
-  beforeEach(() => {
+  afterEach(() => {
     jest.clearAllMocks();
     mockError.mockClear();
     mockInfo.mockClear();

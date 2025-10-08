@@ -4,25 +4,48 @@ import { Logger } from '../utils';
 import { FileUtils } from '../utils/file.utils';
 
 // Mock dependencies
-jest.mock('../utils/file.utils');
 jest.mock('../utils', () => ({
   Logger: jest.fn().mockImplementation(() => ({
     debug: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
+    startOperation: jest.fn(),
+    getStructuredLogger: jest.fn(),
   })),
   isEmptyArray: jest.fn(arr => !arr || arr.length === 0),
+}));
+jest.mock('../utils/file.utils', () => ({
+  FileUtils: {
+    ensureDir: jest.fn(),
+    outputJsonSync: jest.fn(),
+    readJsonSync: jest.fn(),
+    readFileSync: jest.fn(),
+  },
 }));
 
 describe('FileService', () => {
   let fileService: FileService;
   let mockLogger: jest.Mocked<Logger>;
+  let mockFileUtils: jest.Mocked<typeof FileUtils>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Initialize mock references
+    mockFileUtils = FileUtils as jest.Mocked<typeof FileUtils>;
+
+    // Get the mock logger instance created by the constructor
     fileService = new FileService();
-    mockLogger = (Logger as jest.Mock).mock.results[0].value;
+    mockLogger = (Logger as jest.MockedClass<typeof Logger>).mock.results[0].value;
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.restoreAllMocks();
+
+    // Cleanup to prevent memory leaks
+    fileService = undefined as any;
+    mockLogger = undefined as any;
+    mockFileUtils = undefined as any;
   });
 
   describe('getFiles', () => {
@@ -41,20 +64,23 @@ describe('FileService', () => {
   describe('ensureDirectoryExists', () => {
     it('should ensure directory exists successfully', async () => {
       const dirPath = '/test/dir';
-      (fs.ensureDir as jest.Mock).mockResolvedValue(undefined);
+      mockFileUtils.ensureDir.mockResolvedValue(undefined);
 
       await fileService.ensureDirectoryExists(dirPath);
 
-      expect(fs.ensureDir).toHaveBeenCalledWith(dirPath);
+      expect(mockFileUtils.ensureDir).toHaveBeenCalledWith(dirPath);
+      expect(mockFileUtils.ensureDir).toHaveBeenCalledTimes(1);
       expect(mockLogger.debug).toHaveBeenCalledWith(`Ensured directory exists: ${dirPath}`);
     });
 
     it('should throw FileSystemError on failure', async () => {
       const dirPath = '/test/dir';
       const error = new Error('Permission denied');
-      (fs.ensureDir as jest.Mock).mockRejectedValue(error);
+      mockFileUtils.ensureDir.mockRejectedValue(error);
 
       await expect(fileService.ensureDirectoryExists(dirPath)).rejects.toThrow(FileSystemError);
+      expect(mockFileUtils.ensureDir).toHaveBeenCalledWith(dirPath);
+      expect(mockFileUtils.ensureDir).toHaveBeenCalledTimes(1);
       expect(mockLogger.error).toHaveBeenCalledWith(`Failed to ensure directory exists: ${dirPath}`, error);
     });
   });
@@ -75,11 +101,12 @@ describe('FileService', () => {
     it('should return files when found', async () => {
       const folderPath = '/test/folder';
       const files = ['file1.txt', 'file2.txt'];
-      (read as jest.Mock).mockResolvedValue({ files });
+      jest.spyOn(fileService as any, 'readFilesRecursively').mockResolvedValue(files);
 
       const result = await (fileService as any).readFiles(folderPath);
 
-      expect(read).toHaveBeenCalledWith(folderPath);
+      expect((fileService as any).readFilesRecursively).toHaveBeenCalledWith(folderPath);
+      expect((fileService as any).readFilesRecursively).toHaveBeenCalledTimes(1);
       expect(result).toEqual(files);
       expect(mockLogger.info).toHaveBeenCalledWith(`Reading files from folder: ${folderPath}`);
       expect(mockLogger.info).toHaveBeenCalledWith(`Found ${files.length} files in ${folderPath}`);
@@ -87,7 +114,7 @@ describe('FileService', () => {
 
     it('should return empty array when no files found', async () => {
       const folderPath = '/test/folder';
-      (read as jest.Mock).mockResolvedValue({ files: [] });
+      jest.spyOn(fileService as any, 'readFilesRecursively').mockResolvedValue([]);
 
       const result = await (fileService as any).readFiles(folderPath);
 
@@ -98,7 +125,7 @@ describe('FileService', () => {
     it('should throw FileSystemError on directory not found', async () => {
       const folderPath = '/test/folder';
       const error = new Error('ENOENT: no such file or directory');
-      (read as jest.Mock).mockRejectedValue(error);
+      jest.spyOn(fileService as any, 'readFilesRecursively').mockRejectedValue(error);
 
       await expect((fileService as any).readFiles(folderPath)).rejects.toThrow(FileSystemError);
       expect(mockLogger.error).toHaveBeenCalledWith(`Failed to read files from ${folderPath}`, error);
@@ -107,7 +134,7 @@ describe('FileService', () => {
     it('should throw FileSystemError on access denied', async () => {
       const folderPath = '/test/folder';
       const error = new Error('EACCES: permission denied');
-      (read as jest.Mock).mockRejectedValue(error);
+      jest.spyOn(fileService as any, 'readFilesRecursively').mockRejectedValue(error);
 
       await expect((fileService as any).readFiles(folderPath)).rejects.toThrow(FileSystemError);
     });
@@ -117,11 +144,12 @@ describe('FileService', () => {
     it('should save JSON successfully', async () => {
       const filePath = '/test/file.json';
       const data = { key: 'value' };
-      (fs.outputJsonSync as jest.Mock).mockImplementation(() => {});
+      mockFileUtils.outputJsonSync.mockImplementation(() => undefined);
 
       await (fileService as any).saveJson(filePath, data);
 
-      expect(fs.outputJsonSync).toHaveBeenCalledWith(filePath, data);
+      expect(mockFileUtils.outputJsonSync).toHaveBeenCalledWith(filePath, data);
+      expect(mockFileUtils.outputJsonSync).toHaveBeenCalledTimes(1);
       expect(mockLogger.info).toHaveBeenCalledWith(`Saving JSON to: ${filePath}`);
       expect(mockLogger.info).toHaveBeenCalledWith(`Successfully saved JSON to: ${filePath}`);
     });
@@ -130,11 +158,13 @@ describe('FileService', () => {
       const filePath = '/test/file.json';
       const data = { key: 'value' };
       const error = new Error('EACCES: permission denied');
-      (fs.outputJsonSync as jest.Mock).mockImplementation(() => {
+      mockFileUtils.outputJsonSync.mockImplementation(() => {
         throw error;
       });
 
       await expect((fileService as any).saveJson(filePath, data)).rejects.toThrow(FileSystemError);
+      expect(mockFileUtils.outputJsonSync).toHaveBeenCalledWith(filePath, data);
+      expect(mockFileUtils.outputJsonSync).toHaveBeenCalledTimes(1);
       expect(mockLogger.error).toHaveBeenCalledWith(`Failed to save JSON to ${filePath}`, error);
     });
   });
@@ -143,11 +173,12 @@ describe('FileService', () => {
     it('should read and return JSON data', async () => {
       const filePath = '/test/file.json';
       const data = { key: 'value' };
-      (fs.readJsonSync as jest.Mock).mockReturnValue(data);
+      mockFileUtils.readJsonSync.mockReturnValue(data);
 
       const result = await fileService.readJson(filePath);
 
-      expect(fs.readJsonSync).toHaveBeenCalledWith(filePath);
+      expect(mockFileUtils.readJsonSync).toHaveBeenCalledWith(filePath);
+      expect(mockFileUtils.readJsonSync).toHaveBeenCalledTimes(1);
       expect(result).toEqual(data);
       expect(mockLogger.info).toHaveBeenCalledWith(`Reading JSON from: ${filePath}`);
       expect(mockLogger.info).toHaveBeenCalledWith(`Successfully read JSON from: ${filePath}`);
@@ -156,11 +187,13 @@ describe('FileService', () => {
     it('should throw error on failure', async () => {
       const filePath = '/test/file.json';
       const error = new Error('File not found');
-      (fs.readJsonSync as jest.Mock).mockImplementation(() => {
+      mockFileUtils.readJsonSync.mockImplementation(() => {
         throw error;
       });
 
       await expect(fileService.readJson(filePath)).rejects.toThrow(error);
+      expect(mockFileUtils.readJsonSync).toHaveBeenCalledWith(filePath);
+      expect(mockFileUtils.readJsonSync).toHaveBeenCalledTimes(1);
       expect(mockLogger.error).toHaveBeenCalledWith(`Failed to read JSON from ${filePath}`, error);
     });
   });
@@ -169,22 +202,25 @@ describe('FileService', () => {
     it('should return file content as Buffer', () => {
       const filePath = '/test/file.txt';
       const buffer = Buffer.from('content');
-      (fs.readFileSync as jest.Mock).mockReturnValue(buffer);
+      mockFileUtils.readFileSync.mockReturnValue(buffer);
 
       const result = fileService.readFileSync(filePath);
 
-      expect(fs.readFileSync).toHaveBeenCalledWith(filePath);
+      expect(mockFileUtils.readFileSync).toHaveBeenCalledWith(filePath);
+      expect(mockFileUtils.readFileSync).toHaveBeenCalledTimes(1);
       expect(result).toEqual(buffer);
     });
 
     it('should throw error on failure', () => {
       const filePath = '/test/file.txt';
       const error = new Error('File not found');
-      (fs.readFileSync as jest.Mock).mockImplementation(() => {
+      mockFileUtils.readFileSync.mockImplementation(() => {
         throw error;
       });
 
       expect(() => fileService.readFileSync(filePath)).toThrow(error);
+      expect(mockFileUtils.readFileSync).toHaveBeenCalledWith(filePath);
+      expect(mockFileUtils.readFileSync).toHaveBeenCalledTimes(1);
       expect(mockLogger.error).toHaveBeenCalledWith(`Failed to read file: ${filePath}`, error);
     });
   });
@@ -192,23 +228,26 @@ describe('FileService', () => {
   describe('fileExists', () => {
     it('should return true if file exists', () => {
       const filePath = '/test/file.txt';
-      (fs.readFileSync as jest.Mock).mockReturnValue(Buffer.from('content'));
+      mockFileUtils.readFileSync.mockReturnValue(Buffer.from('content'));
 
       const result = fileService.fileExists(filePath);
 
       expect(result).toBe(true);
-      expect(fs.readFileSync).toHaveBeenCalledWith(filePath);
+      expect(mockFileUtils.readFileSync).toHaveBeenCalledWith(filePath);
+      expect(mockFileUtils.readFileSync).toHaveBeenCalledTimes(1);
     });
 
     it('should return false if file does not exist', () => {
       const filePath = '/test/file.txt';
-      (fs.readFileSync as jest.Mock).mockImplementation(() => {
+      mockFileUtils.readFileSync.mockImplementation(() => {
         throw new Error('ENOENT');
       });
 
       const result = fileService.fileExists(filePath);
 
       expect(result).toBe(false);
+      expect(mockFileUtils.readFileSync).toHaveBeenCalledWith(filePath);
+      expect(mockFileUtils.readFileSync).toHaveBeenCalledTimes(1);
     });
   });
 });

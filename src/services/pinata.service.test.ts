@@ -45,8 +45,6 @@ describe('PinataService', () => {
   let mockedPinataSdk: jest.MockedClass<typeof PinataSdk>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-
     // Initialize mock references
     mockedAxios = axios as jest.Mocked<typeof axios>;
     mockedBasePathConverter = basePathConverter as jest.MockedFunction<typeof basePathConverter>;

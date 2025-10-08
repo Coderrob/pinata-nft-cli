@@ -5,14 +5,17 @@ import { DownloadProcessor } from './download.processor';
 // Mock dependencies
 jest.mock('../services/pinata.service');
 
-const mockPinataService = new PinataService({} as PinataConfig) as jest.Mocked<PinataService>;
-(PinataService as jest.Mock).mockImplementation(() => mockPinataService);
-
 describe('DownloadProcessor', () => {
   let processor: DownloadProcessor;
 
-  beforeEach(() => {
+  const mockPinataService = new PinataService({} as PinataConfig) as jest.Mocked<PinataService>;
+  (PinataService as jest.Mock).mockImplementation(() => mockPinataService);
+
+  afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  beforeEach(() => {
     processor = new DownloadProcessor({ apiKey: 'test-key', apiSecret: 'test-secret' });
   });
 

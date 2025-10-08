@@ -6,17 +6,19 @@ import { PinataConfig, ProcessingOptions, UploadResult } from '../types';
 jest.mock('../services/file.service');
 jest.mock('../services/pinata.service');
 
-const mockFileService = new FileService() as jest.Mocked<FileService>;
-const mockPinataService = new PinataService({} as PinataConfig) as jest.Mocked<PinataService>;
-
-(FileService as jest.Mock).mockImplementation(() => mockFileService);
-(PinataService as jest.Mock).mockImplementation(() => mockPinataService);
-
 describe('FileUploadProcessor', () => {
   let processor: FileUploadProcessor;
+  const mockFileService = new FileService() as jest.Mocked<FileService>;
+  const mockPinataService = new PinataService({} as PinataConfig) as jest.Mocked<PinataService>;
+
+  (FileService as jest.Mock).mockImplementation(() => mockFileService);
+  (PinataService as jest.Mock).mockImplementation(() => mockPinataService);
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
   beforeEach(() => {
-    jest.clearAllMocks();
     processor = new FileUploadProcessor({ apiKey: 'test-key', apiSecret: 'test-secret' });
   });
 
