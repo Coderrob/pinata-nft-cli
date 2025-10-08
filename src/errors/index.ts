@@ -27,4 +27,12 @@ export * from './processing.error';
 export * from './system.error';
 export * from './validation.error';
 
+// Export utility functions
+export * from './utils/handleError';
+export * from './utils/handleErrors';
+export * from './utils/handleErrorsWithRecovery';
+export * from './utils/normalizeError';
+export * from './utils/retryOnError';
+export * from './utils/retryOperation';
+
 export { ErrorHandler } from './error-handler';

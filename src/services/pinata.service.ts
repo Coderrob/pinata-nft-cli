@@ -19,10 +19,11 @@
 import axios from 'axios';
 import basePathConverter from 'base-path-converter';
 import FormData from 'form-data';
-import * as fs from 'fs-extra';
-import { read } from 'recursive-fs';
+import * as fs from 'fs'; // Native fs used for createReadStream() - required for streaming files to Pinata
+import * as fsPromises from 'fs/promises';
+import * as path from 'path';
 
-import pinataSdk from '@pinata/sdk';
+import PinataSdk from '@pinata/sdk';
 
 import {
   FileMapping,
@@ -42,8 +43,46 @@ export class PinataService implements IPinataService {
   private readonly pinata: IPinataClient;
   private readonly PINATA_API_PINFILETOIPFS = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
 
+  /**
+   * Recursively reads all files from a directory
+   * @param dirPath - The directory path to read from
+   * @returns Array of absolute file paths
+   */
+  private async readFilesRecursively(dirPath: string): Promise<string[]> {
+    const entries = await fsPromises.readdir(dirPath, { withFileTypes: true });
+
+    const results = await Promise.all(
+      entries.map(async entry => {
+        const fullPath = path.join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+          return this.readFilesRecursively(fullPath);
+        }
+        if (entry.isFile()) {
+          return [fullPath];
+        }
+        return [];
+      })
+    );
+
+    return results.flat();
+  }
+
   constructor(private readonly config: PinataConfig) {
-    this.pinata = pinataSdk(config.apiKey, config.apiSecret);
+    const sdk = new PinataSdk(config.apiKey, config.apiSecret);
+    // Adapt the SDK to match our interface expectations
+    this.pinata = {
+      pinFileToIPFS: sdk.pinFileToIPFS.bind(sdk),
+      pinList: async (filter?: IPinListFilter): Promise<IPinListResponse> => {
+        // The actual SDK requires a filter, so provide defaults if none given
+        const actualFilter = filter || { status: 'all' };
+        const response = await sdk.pinList(actualFilter);
+        // Adapt the response to match our interface (add count field)
+        return {
+          count: response.rows.length,
+          rows: response.rows,
+        };
+      },
+    };
   }
 
   /**
@@ -83,7 +122,7 @@ export class PinataService implements IPinataService {
     this.logger.info(`Uploading folder: ${folderName}`);
 
     try {
-      const { files } = await read(folderPath);
+      const files = await this.readFilesRecursively(folderPath);
       if (!files || isEmptyArray(files)) {
         throw new Error(`No files found in folder: ${folderPath}`);
       }

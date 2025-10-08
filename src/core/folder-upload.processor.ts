@@ -15,23 +15,15 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-import { PinataService, FileService } from '../services';
-import { PinataConfig, ProcessingOptions } from '../types';
-import { BaseFileProcessor } from './base.processor';
+import { FileService } from '../services';
+import { PinataConfig, ProcessingOptions, FolderUploadResult, RateLimitConfig } from '../types';
+import { BasePinataProcessor } from './base-pinata.processor';
 
-export interface FolderUploadResult {
-  folderName: string;
-  cid: string;
-  success: boolean;
-  error?: string;
-}
+export class FolderUploadProcessor extends BasePinataProcessor<FolderUploadResult> {
+  private readonly fileService = new FileService();
 
-export class FolderUploadProcessor extends BaseFileProcessor<FolderUploadResult> {
-  private readonly pinataService: PinataService;
-
-  constructor(config: PinataConfig) {
-    super('FolderUploadProcessor');
-    this.pinataService = new PinataService(config);
+  constructor(config: PinataConfig, rateLimitConfig: RateLimitConfig = { maxConcurrent: 1, minTime: 3000 }) {
+    super('FolderUploadProcessor', config, rateLimitConfig);
   }
 
   /**
@@ -84,8 +76,7 @@ export class FolderUploadProcessor extends BaseFileProcessor<FolderUploadResult>
   private async saveResult(outputPath: string, result: FolderUploadResult): Promise<void> {
     // For folder uploads, we typically just save the CID
     if (result.success) {
-      const service = new FileService();
-      await service.saveJson(outputPath, result.cid);
+      await this.fileService.saveJson(outputPath, result.cid);
     }
   }
 }

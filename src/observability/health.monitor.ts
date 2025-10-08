@@ -18,21 +18,12 @@
  */
 
 import axios from 'axios';
-import * as fs from 'fs-extra';
 import * as os from 'os';
 
-import { HealthCheckResult, HealthStatus } from '../types';
+import { HealthCheckResult, HealthStatus, SystemSnapshot } from '../types';
+import { FileUtils } from '../utils/file.utils';
 import { MetricsCollector } from './metrics.collector';
 import { StructuredLogger } from './structured.logger';
-
-type SystemSnapshot = {
-  totalMemory: number;
-  freeMemory: number;
-  memoryUsagePercent: number;
-  loadAverage: number[];
-  cpuCount: number;
-  diskSpaceAvailable: boolean;
-};
 
 /**
  * Health monitor for system and service health checks
@@ -146,7 +137,7 @@ export class HealthMonitor {
   private async hasDiskAccess(): Promise<boolean> {
     try {
       // eslint-disable-next-line no-bitwise
-      await fs.access(process.cwd(), fs.constants.R_OK | fs.constants.W_OK);
+      await FileUtils.access(process.cwd(), FileUtils.constants.R_OK | FileUtils.constants.W_OK);
       return true;
     } catch {
       return false;
@@ -238,12 +229,12 @@ export class HealthMonitor {
 
     try {
       // Ensure output directory exists and is writable
-      await fs.ensureDir(testPath);
+      await FileUtils.ensureDir(testPath);
 
       // Test write access
       const testFile = `${testPath}/.health-check-${Date.now()}`;
-      await fs.writeFile(testFile, 'health check test');
-      await fs.remove(testFile);
+      await FileUtils.writeFile(testFile, 'health check test');
+      await FileUtils.remove(testFile);
 
       const responseTime = Date.now() - startTime;
 

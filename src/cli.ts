@@ -90,6 +90,29 @@ class PinataCLI {
     throw err;
   }
 
+  /**
+   * Determines the appropriate exit code based on the error type
+   */
+  private getCommanderExitCode(isHelp: boolean, exitCode: number): number {
+    return isHelp ? exitCode || 0 : exitCode || 1;
+  }
+
+  /**
+   * Common logic for handling Commander errors/exits
+   */
+  private handleCommanderCode(code: string, exitCode: number, errorMessage?: string): void {
+    const isHelp = PinataCLI.HELP_CODES.includes(code);
+    const isUser = PinataCLI.USER_CODES.includes(code);
+
+    if (!isHelp && !isUser) return;
+
+    if (isUser && errorMessage) {
+      console.error(errorMessage);
+    }
+
+    process.exit(this.getCommanderExitCode(isHelp, exitCode));
+  }
+
   // Complexity of this method is warranted by explicit, simple command-code handling
   // eslint-disable-next-line complexity
   private tryHandleCommanderExit(err: unknown): boolean {
@@ -101,7 +124,7 @@ class PinataCLI {
     const isUser = PinataCLI.USER_CODES.includes(code);
 
     if (isHelp || isUser) {
-      process.exit(isHelp ? e.exitCode || 0 : e.exitCode || 1);
+      this.handleCommanderCode(code, e.exitCode || 0);
       return true;
     }
 
@@ -133,8 +156,7 @@ class PinataCLI {
     const isUser = PinataCLI.USER_CODES.includes(code);
 
     if (isHelp || isUser) {
-      if (isUser) console.error(ce.message);
-      process.exit(isHelp ? ce.exitCode || 0 : ce.exitCode || 1);
+      this.handleCommanderCode(code, ce.exitCode || 0, isUser ? ce.message : undefined);
       return true;
     }
 

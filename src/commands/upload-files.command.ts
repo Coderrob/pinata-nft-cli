@@ -5,19 +5,20 @@
 
 import { Command } from 'commander';
 
-import { OutputPaths } from '../config/output-paths';
+import { AppConfig, OutputPaths } from '../config';
 import { FileUploadProcessor } from '../core';
 import { CommandOptions, ProcessingOptions, RateLimitConfig, UploadResult } from '../types';
 import { isFailure } from '../utils';
 import { BaseCommand } from './base.command';
+import { ILogger, IConfigProvider, IErrorHandler } from '../types/commands';
 import { OptionGroups } from './options';
 
 /**
  * Configures the `upload files` subcommand that is authored as part of the upload composite.
  */
 export class UploadFilesCommand extends BaseCommand {
-  constructor() {
-    super('files', 'Upload individual files to Pinata IPFS');
+  constructor(logger?: ILogger, configProvider?: IConfigProvider, errorHandler?: IErrorHandler) {
+    super('files', 'Upload individual files to Pinata IPFS', logger, configProvider, errorHandler);
   }
 
   /**
@@ -90,8 +91,8 @@ export class UploadFilesCommand extends BaseCommand {
    */
   private buildProcessingOptions(options: CommandOptions, rateLimitConfig: RateLimitConfig): ProcessingOptions {
     return {
-      folderPath: options.folder ?? 'files',
-      outputPath: options.output ?? './output/uploaded-files.json',
+      folderPath: options.folder ?? AppConfig.getFileProcessingConfig().defaultInputFolder,
+      outputPath: options.output ?? OutputPaths.FILES.uploadedFiles,
       rateLimitConfig,
     };
   }

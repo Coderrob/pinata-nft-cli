@@ -17,4 +17,5 @@
  */
 
 // Export all command-related types
+export * from './interfaces';
 export * from './options';

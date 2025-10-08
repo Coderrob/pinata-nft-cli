@@ -1,4 +1,5 @@
-import { BaseApplicationError, ErrorCode, ErrorContext, ErrorSeverity } from './base.error';
+import { BaseApplicationError } from './base.error';
+import { ErrorCode, ErrorContext, ErrorSeverity } from '../types/errors';
 
 /**
  * Processing related errors

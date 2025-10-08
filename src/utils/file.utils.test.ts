@@ -16,7 +16,7 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-import { FileUtils, Logger, ObjectUtils } from '.';
+import { FileUtils } from './file.utils';
 
 describe('FileUtils', () => {
   describe('getFileName', () => {
@@ -46,52 +46,6 @@ describe('FileUtils', () => {
     test('should return false for invalid paths', () => {
       expect(FileUtils.isValidPath('')).toBe(false);
       expect(FileUtils.isValidPath('   ')).toBe(false);
-    });
-  });
-});
-
-describe('Logger', () => {
-  let consoleSpy: jest.SpyInstance;
-
-  beforeEach(() => {
-    consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-  });
-
-  afterEach(() => {
-    consoleSpy.mockRestore();
-  });
-
-  test('should log info message with context', () => {
-    const logger = new Logger('TestContext');
-    logger.info('Test message');
-
-    expect(consoleSpy).toHaveBeenCalledTimes(1);
-    const [message] = consoleSpy.mock.calls[0];
-    expect(message).toContain('[INFO] [TestContext] Test message');
-  });
-});
-
-describe('ObjectUtils', () => {
-  describe('sortObjectByKeys', () => {
-    test('should sort object keys naturally', () => {
-      const input = {
-        'file10.txt': 'hash10',
-        'file2.txt': 'hash2',
-        'file1.txt': 'hash1',
-      };
-      const result = ObjectUtils.sortObjectByKeys(input);
-
-      expect(Object.keys(result)).toEqual(['file1.txt', 'file2.txt', 'file10.txt']);
-    });
-  });
-
-  describe('isEmpty', () => {
-    test('should return true for empty object', () => {
-      expect(ObjectUtils.isEmpty({})).toBe(true);
-    });
-
-    test('should return false for non-empty object', () => {
-      expect(ObjectUtils.isEmpty({ key: 'value' })).toBe(false);
     });
   });
 });

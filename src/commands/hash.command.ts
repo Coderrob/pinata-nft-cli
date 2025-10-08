@@ -18,7 +18,7 @@
 
 import { Command } from 'commander';
 
-import { OutputPaths } from '../config/output-paths';
+import { AppConfig, OutputPaths } from '../config';
 import { HashProcessor } from '../core';
 import { CommandOptions } from '../types';
 import { BaseCommand } from './base.command';
@@ -55,8 +55,8 @@ export class HashCommand extends BaseCommand {
       const processor = new HashProcessor(this.createRateLimitConfig(options));
 
       const processingOptions = {
-        folderPath: options.folder || 'files',
-        outputPath: options.output || './output/file-hashes.json',
+        folderPath: options.folder || AppConfig.getFileProcessingConfig().defaultInputFolder,
+        outputPath: options.output || OutputPaths.FILES.fileHashes,
       };
 
       if (options.finalOutput) {

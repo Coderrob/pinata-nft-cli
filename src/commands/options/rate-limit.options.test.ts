@@ -19,14 +19,14 @@
 import { Option } from 'commander';
 import { RateLimitOptions } from './rate-limit.options';
 
-const requireCommanderOption = () => require('commander').Option;
-
 describe('RateLimitOptions', () => {
-  const parse = (option: Option, value: string): number => {
+  const requireCommanderOption = () => Option;
+
+  function parse(option: Option, value: string): number {
     const parser = option.parseArg as ((arg: string, previous?: unknown) => unknown) | undefined;
     expect(parser).toBeDefined();
     return parser!(value, undefined) as number;
-  };
+  }
 
   describe('concurrent', () => {
     it('should be an instance of Option', () => {

@@ -17,11 +17,44 @@
  */
 
 import { LogContext, StructuredLogger } from '../observability';
-import { BaseApplicationError, ErrorCode } from './base.error';
+import { BaseApplicationError } from './base.error';
+import { ErrorCode } from '../types/errors';
 import { FileSystemError } from './file-system.error';
 import { NetworkError } from './network.error';
 import { PinataError } from './pinata.error';
 import { SystemError } from './system.error';
+
+/**
+ * Configuration for error handling decorator
+ */
+export interface ErrorHandlerConfig {
+  /** Context name for logging */
+  context?: string;
+  /** Whether to re-throw errors after handling */
+  rethrow?: boolean;
+}
+
+/**
+ * Configuration for retry decorator
+ */
+export interface RetryConfig {
+  /** Maximum number of retry attempts */
+  maxRetries?: number;
+  /** Base backoff delay in milliseconds */
+  backoffMs?: number;
+  /** Context name for logging */
+  context?: string;
+}
+
+/**
+ * Configuration for error recovery decorator
+ */
+export interface ErrorRecoveryConfig {
+  /** Context name for logging */
+  context?: string;
+  /** Recovery function to call on retryable errors */
+  recoveryFn?: () => Promise<unknown>;
+}
 
 /**
  * Error handler utility for centralized error processing

@@ -20,8 +20,8 @@ import Bottleneck from 'bottleneck';
 import { BinaryToTextEncoding, createHash } from 'crypto';
 
 import { FileMapping, IHashCalculator, IHashDigestStrategy } from '../types';
-import { FileUtils } from '../utils';
-import { RateLimitedFileMappingDependencies, RateLimitedFileMappingService } from './rate-limited-file-mapping.service';
+import { RateLimitedFileMappingDependencies } from '../types/services';
+import { RateLimitedFileMappingService } from './rate-limited-file-mapping.service';
 
 /**
  * Dependencies for HashCalculatorService allowing custom strategies and collaborators.
@@ -72,21 +72,10 @@ export class HashCalculatorService
    * @returns SHA-256 hash of the file
    */
   public async calculateHash(filePath: string): Promise<string> {
-    const fileName = FileUtils.getFileName(filePath);
-
-    try {
-      const fileData = this.readFileContent(filePath);
-      const hash = this.hashStrategy.digest(fileData);
-      this.logger.info(`${fileName} hash calculated`, {
-        hash,
-        algorithm: this.hashStrategy.algorithm,
-        encoding: this.hashStrategy.encoding,
-      });
-      return hash;
-    } catch (error) {
-      this.logger.error(`Failed to calculate hash for file: ${fileName}`, error);
-      throw error;
-    }
+    return this.processSingleFile(filePath, fileData => this.hashStrategy.digest(fileData), 'hash', {
+      algorithm: this.hashStrategy.algorithm,
+      encoding: this.hashStrategy.encoding,
+    });
   }
 
   /**
@@ -104,12 +93,7 @@ export class HashCalculatorService
    * @returns Single hash representing all file hashes
    */
   public async calculateHashOfHashes(hashes: string[]): Promise<string> {
-    const concatenated = hashes.join('');
-    this.logger.info('Calculating hash of concatenated hashes', {
-      length: concatenated.length,
-    });
-
-    return this.computeAggregateHash(concatenated);
+    return this.calculateHashOfHashesInternal(hashes.join(''));
   }
 
   /**
@@ -118,19 +102,20 @@ export class HashCalculatorService
    * @returns Single hash representing all file hashes
    */
   public calculateHashOfHashesFromMapping(hashes: FileMapping): string {
-    const concatenated = Object.values(hashes).join('');
+    return this.calculateHashOfHashesInternal(Object.values(hashes).join(''));
+  }
+
+  /**
+   * Internal method to calculate hash of concatenated hashes
+   * @param concatenated - Concatenated hash string
+   * @returns Single hash representing all file hashes
+   */
+  private calculateHashOfHashesInternal(concatenated: string): string {
     this.logger.info('Calculating hash of concatenated hashes', {
       length: concatenated.length,
     });
 
     return this.computeAggregateHash(concatenated);
-  }
-
-  /**
-   * Provides a descriptive token for log messages.
-   */
-  protected getOperationToken(): string {
-    return 'hashing';
   }
 
   /**
@@ -156,6 +141,13 @@ export class HashCalculatorService
       algorithm: this.hashStrategy.algorithm,
       encoding: this.hashStrategy.encoding,
     });
+  }
+
+  /**
+   * Provides a descriptive token for log messages.
+   */
+  protected getOperationToken(): string {
+    return 'hashing';
   }
 
   /**

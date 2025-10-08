@@ -1,4 +1,5 @@
-import { BaseApplicationError, ErrorCode, ErrorContext, ErrorSeverity } from './base.error';
+import { BaseApplicationError } from './base.error';
+import { ErrorCode, ErrorContext, ErrorSeverity } from '../types/errors';
 
 /**
  * System resource related errors
@@ -10,6 +11,6 @@ export class SystemError extends BaseApplicationError {
       ? ErrorSeverity.CRITICAL
       : ErrorSeverity.HIGH;
 
-    super(message, code, severity, context, false, cause);
+    super(message, code, severity, context, true, cause);
   }
 }

@@ -20,39 +20,14 @@ import Bottleneck from 'bottleneck';
 
 import { FileUtils, Logger, ObjectUtils } from '../utils';
 import { FileService } from './file.service';
-
-/**
- * Minimal contract for synchronous file reading to support digest operations.
- */
-export interface FileReader {
-  /**
-   * Reads file content as a Buffer.
-   * @param filePath - Absolute or relative path to the file.
-   */
-  readFileSync(filePath: string): Buffer;
-}
-
-/**
- * Optional dependencies for the rate-limited file mapping service.
- */
-export interface RateLimitedFileMappingDependencies {
-  /**
-   * Custom file reader implementation; defaults to FileService.
-   */
-  readonly fileReader?: FileReader;
-
-  /**
-   * Custom logger instance; defaults to a scoped Logger built from the service name.
-   */
-  readonly logger?: Logger;
-}
+import { FileReader, RateLimitedFileMappingDependencies, ILogger } from '../types';
 
 /**
  * Base class that coordinates rate-limited processing of files into key/value mappings.
  * Provides a template method hook for computing results while handling logging and error propagation.
  */
 export abstract class RateLimitedFileMappingService<TResult, TMapping extends Record<string, TResult>> {
-  protected readonly logger: Logger;
+  protected readonly logger: ILogger;
   private readonly fileReader: FileReader;
 
   protected constructor(
@@ -118,6 +93,36 @@ export abstract class RateLimitedFileMappingService<TResult, TMapping extends Re
   protected handleProcessingError(fileName: string, error: unknown): never {
     this.logger.error(`Failed to process ${this.getOperationToken()} for file: ${fileName}`, error);
     throw error;
+  }
+
+  /**
+   * Helper method to process a single file with consistent error handling and logging.
+   * Useful for services that need to calculate a result for individual files outside of batch processing.
+   * @param filePath - Path to the file to process.
+   * @param computeFn - Function that computes the result from file content.
+   * @param operationName - Name of the operation for logging purposes.
+   * @param metadata - Optional metadata to include in success log.
+   */
+  protected async processSingleFile(
+    filePath: string,
+    computeFn: (fileContent: Buffer) => Promise<TResult> | TResult,
+    operationName: string,
+    metadata?: Record<string, unknown>
+  ): Promise<TResult> {
+    const fileName = FileUtils.getFileName(filePath);
+
+    try {
+      const fileData = this.readFileContent(filePath);
+      const result = await computeFn(fileData);
+      this.logger.info(`${fileName} ${operationName} calculated`, {
+        [operationName]: result,
+        ...metadata,
+      });
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to calculate ${operationName} for file: ${fileName}`, error);
+      throw error;
+    }
   }
 
   /**

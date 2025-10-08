@@ -44,7 +44,7 @@ export class DownloadCommand extends BaseCommand {
     });
   }
 
-  private async execute(options: CommandOptions & { status?: string }): Promise<void> {
+  protected async execute(options: CommandOptions & { status?: string }): Promise<void> {
     try {
       this.validateOptions(options);
       this.logger.info('Starting CID download process');
@@ -57,7 +57,7 @@ export class DownloadCommand extends BaseCommand {
 
       const processingOptions = {
         folderPath: '', // Not used for download
-        outputPath: options.output || './output/downloaded-cids.json',
+        outputPath: options.output || OutputPaths.FILES.downloadedCids,
       };
 
       const cidMappings = await processor.process(processingOptions, status);
@@ -69,7 +69,7 @@ export class DownloadCommand extends BaseCommand {
     }
   }
 
-  private validatePinStatus(status: string): PinStatus {
+  protected validatePinStatus(status: string): PinStatus {
     const normalizedStatus = status.toLowerCase();
 
     switch (normalizedStatus) {

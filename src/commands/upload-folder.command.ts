@@ -18,10 +18,11 @@
 
 import { Command } from 'commander';
 
-import { OutputPaths } from '../config/output-paths';
+import { AppConfig, OutputPaths } from '../config';
 import { FolderUploadProcessor } from '../core';
 import { CommandOptions, ProcessingOptions } from '../types';
 import { BaseCommand } from './base.command';
+import { ILogger, IConfigProvider, IErrorHandler } from '../types/commands';
 import { OptionGroups } from './options';
 
 type FolderUploadOptions = CommandOptions & { name?: string };
@@ -30,8 +31,8 @@ type FolderUploadOptions = CommandOptions & { name?: string };
  * Configures the `upload folder` subcommand that coordinates recursive folder uploads.
  */
 export class UploadFolderCommand extends BaseCommand {
-  constructor() {
-    super('folder', 'Upload an entire folder to Pinata IPFS');
+  constructor(logger?: ILogger, configProvider?: IConfigProvider, errorHandler?: IErrorHandler) {
+    super('folder', 'Upload an entire folder to Pinata IPFS', logger, configProvider, errorHandler);
   }
 
   /**
@@ -66,8 +67,8 @@ export class UploadFolderCommand extends BaseCommand {
       const processor = new FolderUploadProcessor(config);
 
       const processingOptions: ProcessingOptions = {
-        folderPath: options.folder || 'metadata',
-        outputPath: options.output || './output/folder-cid.json',
+        folderPath: options.folder || AppConfig.getFileProcessingConfig().defaultMetadataFolder,
+        outputPath: options.output || OutputPaths.FILES.folderCid,
       };
 
       const { cid, error, folderName, success } = await processor.process(processingOptions, options.name);

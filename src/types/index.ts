@@ -17,6 +17,9 @@
  */
 
 export * from './commands';
+export * from './core';
+export * from './errors';
 export * from './file-processing';
 export * from './observability';
 export * from './pinata';
+export * from './services';

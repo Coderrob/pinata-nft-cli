@@ -16,14 +16,11 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-import { FileService, HashCalculatorService } from '../services';
+import { HashCalculatorService } from '../services';
 import { FileMapping, ProcessingOptions } from '../types';
-import { ObjectUtils } from '../utils';
-import { isEmptyArray } from '../utils/guards';
-import { BaseFileProcessor } from './base.processor';
+import { BaseCalculatorProcessor } from './base-calculator.processor';
 
-export class HashProcessor extends BaseFileProcessor<FileMapping> {
-  private readonly fileService = new FileService();
+export class HashProcessor extends BaseCalculatorProcessor {
   private readonly hashCalculatorService: HashCalculatorService;
 
   constructor(rateLimitConfig = { maxConcurrent: 5 }) {
@@ -32,32 +29,12 @@ export class HashProcessor extends BaseFileProcessor<FileMapping> {
   }
 
   /**
-   * Processes files to calculate their SHA-256 hashes
-   * @param options - Processing options including folder path and output path
-   * @returns Object mapping file names to their hashes
+   * Calculate hash mapping for files
+   * @param files - Array of file paths
+   * @returns Mapping of file names to hashes
    */
-  public async process(options: ProcessingOptions): Promise<FileMapping> {
-    this.validateOptions(options);
-    this.logProcessingStart(options);
-
-    try {
-      const files = await this.fileService.readFiles(options.folderPath);
-
-      if (isEmptyArray(files)) {
-        this.logger.warn(`No files found in folder: ${options.folderPath}`);
-        return {};
-      }
-
-      const hashMapping = await this.hashCalculatorService.calculateHashes(files);
-      const sortedMapping = ObjectUtils.sortObjectByKeys(hashMapping);
-
-      await this.fileService.saveJson(options.outputPath, sortedMapping);
-      this.logProcessingComplete(files.length);
-
-      return sortedMapping;
-    } catch (error) {
-      this.handleError(error);
-    }
+  protected async calculateMapping(files: string[]): Promise<FileMapping> {
+    return this.hashCalculatorService.calculateHashes(files);
   }
 
   /**

@@ -324,4 +324,11 @@ export class OperationTimer {
       }
     );
   }
+
+  /**
+   * Get the operation name
+   */
+  public getOperationName(): string {
+    return this.operation;
+  }
 }

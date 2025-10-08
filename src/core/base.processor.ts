@@ -18,6 +18,9 @@
 
 import Bottleneck from 'bottleneck';
 
+import { BaseApplicationError } from '../errors';
+import { ErrorCode } from '../types/errors';
+import { ProcessingError } from '../errors/processing.error';
 import { IFileProcessor, ProcessingOptions, RateLimitConfig } from '../types';
 import { isNonEmptyString, Logger } from '../utils';
 
@@ -74,12 +77,46 @@ export abstract class BaseFileProcessor<TResult> implements IFileProcessor<TResu
   }
 
   /**
-   * Handles processing errors
+   * Handles processing errors with structured error handling
    * @param error - The error that occurred
+   * @param operation - The operation that failed
+   * @returns ProcessingError for consistent error handling
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected handleError(error: any): never {
-    this.logger.error(`${this.processorName} processing failed`, error);
-    throw error;
+  protected handleError(error: unknown, operation?: string): never {
+    const normalizedError = this.normalizeError(error, operation);
+    this.logger.error(`${this.processorName} processing failed`, normalizedError, {
+      operation: operation || `${this.processorName}.process`,
+      metadata: {
+        errorCode: normalizedError.code,
+        severity: normalizedError.severity,
+      },
+    });
+    throw normalizedError;
+  }
+
+  /**
+   * Normalize errors to consistent BaseApplicationError instances
+   */
+  private normalizeError(error: unknown, operation?: string): BaseApplicationError {
+    if (error instanceof BaseApplicationError) {
+      return error;
+    }
+
+    if (error instanceof Error) {
+      return new ProcessingError(
+        error.message,
+        ErrorCode.PROCESSING_FAILED,
+        {
+          operation: operation || `${this.processorName}.process`,
+          metadata: { originalError: error.name },
+        },
+        error
+      );
+    }
+
+    return new ProcessingError('Unknown processing error occurred', ErrorCode.UNKNOWN_ERROR, {
+      operation: operation || `${this.processorName}.process`,
+      metadata: { originalError: String(error) },
+    });
   }
 }

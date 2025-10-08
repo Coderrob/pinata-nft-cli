@@ -16,14 +16,41 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-import * as fs from 'fs-extra';
-import { read } from 'recursive-fs';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
+import { FileSystemError } from '../errors';
+import { ErrorCode } from '../types/errors';
 import { IFileService } from '../types';
 import { isEmptyArray, Logger } from '../utils';
+import { FileUtils } from '../utils/file.utils';
 
 export class FileService implements IFileService {
   private readonly logger = new Logger('FileService');
+
+  /**
+   * Recursively reads all files from a directory
+   * @param dirPath - The directory path to read from
+   * @returns Array of absolute file paths
+   */
+  private async readFilesRecursively(dirPath: string): Promise<string[]> {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+
+    const results = await Promise.all(
+      entries.map(async entry => {
+        const fullPath = path.join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+          return this.readFilesRecursively(fullPath);
+        }
+        if (entry.isFile()) {
+          return [fullPath];
+        }
+        return [];
+      })
+    );
+
+    return results.flat();
+  }
 
   /**
    * Gets all files from a folder (interface method)
@@ -37,11 +64,18 @@ export class FileService implements IFileService {
    */
   public async ensureDirectoryExists(dirPath: string): Promise<void> {
     try {
-      await fs.ensureDir(dirPath);
+      await FileUtils.ensureDir(dirPath);
       this.logger.debug(`Ensured directory exists: ${dirPath}`);
     } catch (error) {
-      this.logger.error(`Failed to ensure directory exists: ${dirPath}`, error);
-      throw error;
+      const message = `Failed to ensure directory exists: ${dirPath}`;
+      this.logger.error(message, error);
+
+      throw new FileSystemError(
+        message,
+        ErrorCode.DIRECTORY_ACCESS_DENIED,
+        { filePath: dirPath, operation: 'ensureDirectoryExists' },
+        error instanceof Error ? error : undefined
+      );
     }
   }
 
@@ -60,7 +94,7 @@ export class FileService implements IFileService {
   public async readFiles(folderPath: string): Promise<string[]> {
     try {
       this.logger.info(`Reading files from folder: ${folderPath}`);
-      const { files } = await read(folderPath);
+      const files = await this.readFilesRecursively(folderPath);
 
       if (!files || isEmptyArray(files)) {
         this.logger.warn(`No files found in folder: ${folderPath}`);
@@ -70,9 +104,55 @@ export class FileService implements IFileService {
       this.logger.info(`Found ${files.length} files in ${folderPath}`);
       return files;
     } catch (error) {
-      this.logger.error(`Failed to read files from ${folderPath}`, error);
-      throw error;
+      throw this.handleReadFilesError(error, folderPath);
     }
+  }
+
+  /**
+   * Handles errors from readFiles operation
+   * @param error - The original error
+   * @param folderPath - The folder path that caused the error
+   * @returns FileSystemError with appropriate error code
+   */
+  private handleReadFilesError(error: unknown, folderPath: string): FileSystemError {
+    const message = `Failed to read files from ${folderPath}`;
+    this.logger.error(message, error);
+
+    const errorCode = this.determineDirectoryErrorCode(error);
+    return new FileSystemError(
+      message,
+      errorCode,
+      { filePath: folderPath, operation: 'readFiles' },
+      error instanceof Error ? error : undefined
+    );
+  }
+
+  /**
+   * Determines the appropriate error code for directory operations
+   * @param error - The original error
+   * @returns Appropriate ErrorCode
+   */
+  private determineDirectoryErrorCode(error: unknown): ErrorCode {
+    if (!(error instanceof Error)) {
+      return ErrorCode.FILE_NOT_FOUND;
+    }
+
+    return this.mapDirectoryErrorMessage(error.message);
+  }
+
+  /**
+   * Maps directory error message to appropriate error code
+   * @param message - Error message
+   * @returns Appropriate ErrorCode
+   */
+  private mapDirectoryErrorMessage(message: string): ErrorCode {
+    if (message.includes('ENOENT') || message.includes('not found')) {
+      return ErrorCode.DIRECTORY_NOT_FOUND;
+    }
+
+    return message.includes('EACCES') || message.includes('permission')
+      ? ErrorCode.DIRECTORY_ACCESS_DENIED
+      : ErrorCode.FILE_NOT_FOUND;
   }
 
   /**
@@ -83,12 +163,58 @@ export class FileService implements IFileService {
   public async saveJson(filePath: string, data: unknown): Promise<void> {
     try {
       this.logger.info(`Saving JSON to: ${filePath}`);
-      fs.outputJsonSync(filePath, data);
+      FileUtils.outputJsonSync(filePath, data);
       this.logger.info(`Successfully saved JSON to: ${filePath}`);
     } catch (error) {
-      this.logger.error(`Failed to save JSON to ${filePath}`, error);
-      throw error;
+      throw this.handleSaveJsonError(error, filePath);
     }
+  }
+
+  /**
+   * Handles errors from saveJson operation
+   * @param error - The original error
+   * @param filePath - The file path that caused the error
+   * @returns FileSystemError with appropriate error code
+   */
+  private handleSaveJsonError(error: unknown, filePath: string): FileSystemError {
+    const message = `Failed to save JSON to ${filePath}`;
+    this.logger.error(message, error);
+
+    const errorCode = this.determineFileErrorCode(error);
+    return new FileSystemError(
+      message,
+      errorCode,
+      { filePath, operation: 'saveJson' },
+      error instanceof Error ? error : undefined
+    );
+  }
+
+  /**
+   * Determines the appropriate error code for file operations
+   * @param error - The original error
+   * @returns Appropriate ErrorCode
+   */
+  private determineFileErrorCode(error: unknown): ErrorCode {
+    if (!(error instanceof Error)) {
+      return ErrorCode.FILE_ACCESS_DENIED;
+    }
+
+    return this.mapFileErrorMessage(error.message);
+  }
+
+  /**
+   * Maps file error message to appropriate error code
+   * @param message - Error message
+   * @returns Appropriate ErrorCode
+   */
+  private mapFileErrorMessage(message: string): ErrorCode {
+    if (message.includes('ENOSPC') || message.includes('no space')) {
+      return ErrorCode.DISK_FULL;
+    }
+
+    return message.includes('EACCES') || message.includes('permission')
+      ? ErrorCode.FILE_ACCESS_DENIED
+      : ErrorCode.FILE_ACCESS_DENIED;
   }
 
   /**
@@ -99,7 +225,7 @@ export class FileService implements IFileService {
   public async readJson<T>(filePath: string): Promise<T> {
     try {
       this.logger.info(`Reading JSON from: ${filePath}`);
-      const data = fs.readJsonSync(filePath);
+      const data = FileUtils.readJsonSync<T>(filePath);
       this.logger.info(`Successfully read JSON from: ${filePath}`);
       return data;
     } catch (error) {
@@ -115,7 +241,7 @@ export class FileService implements IFileService {
    */
   public readFileSync(filePath: string): Buffer {
     try {
-      return fs.readFileSync(filePath);
+      return FileUtils.readFileSync(filePath);
     } catch (error) {
       this.logger.error(`Failed to read file: ${filePath}`, error);
       throw error;
@@ -129,7 +255,7 @@ export class FileService implements IFileService {
    */
   public fileExists(filePath: string): boolean {
     try {
-      fs.readFileSync(filePath);
+      FileUtils.readFileSync(filePath);
       return true;
     } catch {
       return false;

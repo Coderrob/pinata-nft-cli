@@ -16,7 +16,15 @@ module.exports = {
     },
   },
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          experimentalDecorators: true,
+          emitDecoratorMetadata: true,
+        },
+      },
+    ],
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
   moduleNameMapper: {

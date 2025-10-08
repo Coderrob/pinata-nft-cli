@@ -18,7 +18,7 @@
 
 import { Command } from 'commander';
 
-import { OutputPaths } from '../config/output-paths';
+import { AppConfig, OutputPaths } from '../config';
 import { CIDProcessor } from '../core';
 import { CommandOptions } from '../types';
 import { BaseCommand } from './base.command';
@@ -102,8 +102,8 @@ export class CIDCommand extends BaseCommand {
       const processor = new CIDProcessor(this.createRateLimitConfig(options));
 
       const processingOptions = {
-        folderPath: options.folder || 'files',
-        outputPath: options.output || './output/file-cids.json',
+        folderPath: options.folder || AppConfig.getFileProcessingConfig().defaultInputFolder,
+        outputPath: options.output || OutputPaths.FILES.fileCids,
       };
 
       const cidMapping = await processor.process(processingOptions);

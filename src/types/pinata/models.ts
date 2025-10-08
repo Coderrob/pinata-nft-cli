@@ -16,53 +16,32 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+import { PinataPin, PinataPinListFilterOptions, PinataPinListResponse, PinataPinResponse } from '@pinata/sdk';
 import { PinStatus } from './enums';
 
 /**
  * Response from Pinata upload operations
  */
-export interface IPinataResponse {
-  readonly IpfsHash: string;
-  readonly PinSize: number;
-  readonly Timestamp: string;
-}
+export interface IPinataResponse extends PinataPinResponse {}
 
 /**
  * Pin object from Pinata list response
  */
-export interface IPinataPin {
-  readonly id: string;
-  readonly ipfs_pin_hash: string;
-  readonly size: number;
-  readonly user_id: string;
-  readonly date_pinned: string;
-  readonly date_unpinned?: string;
-  readonly metadata: {
-    readonly name?: string;
-    readonly keyvalues?: Record<string, unknown>;
-  };
-  readonly regions: ReadonlyArray<{
-    readonly regionId: string;
-    readonly currentReplicationCount: number;
-    readonly desiredReplicationCount: number;
-  }>;
-}
+export interface IPinataPin extends PinataPin {}
 
 /**
  * Response from Pinata list pins API
  */
-export interface IPinListResponse {
+export interface IPinListResponse extends PinataPinListResponse {
   readonly count: number;
-  readonly rows: ReadonlyArray<IPinataPin>;
 }
 
-export interface IPinListFilter {
-  status: PinStatus;
-  pageOffset?: number;
-  pageLimit?: number;
+export interface IPinListFilter extends PinataPinListFilterOptions {
+  readonly status: PinStatus;
+  readonly pageOffset?: number;
 }
 
 export interface IFileCheck {
-  exists: boolean;
-  ipfsHash?: string;
+  readonly exists: boolean;
+  readonly ipfsHash?: string;
 }

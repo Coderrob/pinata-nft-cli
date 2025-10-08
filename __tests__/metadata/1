@@ -1,8 +1,13 @@
 {
-  "name": "#2",
+  "attributes": [
+    {
+      "trait_type": "Number",
+      "value": "Two"
+    }
+  ],
   "description": "The number 2.",
-  "image": "ipfs://QmazpAaWf3Bb4qhSW9PnQXfj2URbQwdNbZvDr77RbwH7xb",
-  "seller_fee_basis_points": 400,
   "fee_recipient": "",
-  "attributes": [{ "trait_type": "Number", "value": "Two" }]
+  "image": "ipfs://QmazpAaWf3Bb4qhSW9PnQXfj2URbQwdNbZvDr77RbwH7xb",
+  "name": "#2",
+  "seller_fee_basis_points": 400
 }

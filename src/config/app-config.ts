@@ -74,6 +74,7 @@ export class AppConfig {
   public static getFileProcessingConfig() {
     return {
       defaultInputFolder: AppConfig.configManager.getString('DEFAULT_INPUT_FOLDER', 'files'),
+      defaultMetadataFolder: AppConfig.configManager.getString('DEFAULT_METADATA_FOLDER', 'metadata'),
       defaultOutputFolder: AppConfig.configManager.getString('DEFAULT_OUTPUT_FOLDER', './output'),
       maxFileSize: AppConfig.configManager.getNumber('MAX_FILE_SIZE_MB', 100),
       supportedExtensions: AppConfig.configManager

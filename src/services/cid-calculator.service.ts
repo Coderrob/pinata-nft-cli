@@ -19,30 +19,30 @@
 import Bottleneck from 'bottleneck';
 import { of } from 'ipfs-only-hash';
 
-import { FileMapping, ICIDCalculator, IFileDigestStrategy } from '../types';
-import { FileUtils } from '../utils';
-import { RateLimitedFileMappingDependencies, RateLimitedFileMappingService } from './rate-limited-file-mapping.service';
+import { FileMapping, ICIDCalculator, IFileDigestStrategy, CIDCalculatorDependencies } from '../types';
+import { RateLimitedFileMappingService } from './rate-limited-file-mapping.service';
 
 /**
- * Dependencies for CIDCalculatorService allowing custom strategies and collaborators.
+ * Default digest strategy that uses ipfs-unixfs-importer (via ipfs-only-hash wrapper) for CID generation.
+ * This provides full IPFS UnixFS compatibility with proper chunking and DAG creation.
+ *
+ * Note: ipfs-only-hash is a CommonJS-compatible wrapper around ipfs-unixfs-importer that provides
+ * the same CID generation functionality. It uses the UnixFS importer internally with onlyHash=true
+ * to generate CIDs without storing blocks, which is exactly what we need for content addressing.
+ *
+ * The generated CIDs are compatible with IPFS and use the dag-pb codec with the sha2-256 hash function.
  */
-export type CIDCalculatorDependencies = RateLimitedFileMappingDependencies & {
-  /**
-   * Strategy used to produce IPFS compatible content identifiers.
-   */
-  readonly cidStrategy?: IFileDigestStrategy<string>;
-};
-
-/**
- * Default digest strategy that delegates to ipfs-only-hash for CID generation.
- */
-class IpfsOnlyHashStrategy implements IFileDigestStrategy<string> {
-  public readonly name = 'ipfs-only-hash';
-  public readonly algorithm = 'ipfs-only-hash';
+class IpfsUnixFsStrategy implements IFileDigestStrategy<string> {
+  public readonly name = 'ipfs-unixfs-importer';
+  public readonly algorithm = 'dag-pb';
 
   /**
-   * Generates an IPFS CID for the provided content buffer.
+   * Generates an IPFS CID for the provided content buffer using ipfs-unixfs-importer.
+   * The ipfs-only-hash library provides a CommonJS-compatible interface to ipfs-unixfs-importer
+   * and handles the UnixFS encoding, chunking, and DAG creation automatically.
+   *
    * @param content - Content to transform into a CID.
+   * @returns Promise resolving to the CID string (base58btc encoded CIDv0 by default).
    */
   public async digest(content: Buffer): Promise<string> {
     return of(content);
@@ -54,7 +54,7 @@ export class CIDCalculatorService extends RateLimitedFileMappingService<string, 
 
   constructor(rateLimiter: Bottleneck, dependencies: CIDCalculatorDependencies = {}) {
     super(rateLimiter, 'CIDCalculatorService', dependencies);
-    this.cidStrategy = dependencies.cidStrategy ?? new IpfsOnlyHashStrategy();
+    this.cidStrategy = dependencies.cidStrategy ?? new IpfsUnixFsStrategy();
   }
 
   /**
@@ -63,20 +63,9 @@ export class CIDCalculatorService extends RateLimitedFileMappingService<string, 
    * @returns IPFS CID for the file
    */
   public async calculateCID(filePath: string): Promise<string> {
-    const fileName = FileUtils.getFileName(filePath);
-
-    try {
-      const fileData = this.readFileContent(filePath);
-      const cid = await this.cidStrategy.digest(fileData);
-      this.logger.info(`${fileName} CID calculated`, {
-        cid,
-        algorithm: this.cidStrategy.algorithm,
-      });
-      return cid;
-    } catch (error) {
-      this.logger.error(`Failed to calculate CID for file: ${fileName}`, error);
-      throw error;
-    }
+    return this.processSingleFile(filePath, fileData => this.cidStrategy.digest(fileData), 'CID', {
+      algorithm: this.cidStrategy.algorithm,
+    });
   }
 
   /**

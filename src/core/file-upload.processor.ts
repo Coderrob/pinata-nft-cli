@@ -16,14 +16,16 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-import { ErrorCode, ErrorHandler, ProcessingError } from '../errors';
-import { PerformanceMonitor } from '../observability/performance.monitor';
-import { FileService, PinataService } from '../services';
+import { OutputPaths } from '../config';
+import { ErrorHandler, ProcessingError } from '../errors';
+import { ErrorCode } from '../types/errors';
+import { trackBatchOperation, monitorFunction } from '../observability/performance.monitor';
+import { FileService } from '../services';
 import { FileMapping, PinataConfig, ProcessingOptions, RateLimitConfig, UploadResult } from '../types';
 import { FileUtils, isEmptyArray } from '../utils';
-import { BaseFileProcessor } from './base.processor';
+import { BasePinataProcessor } from './base-pinata.processor';
 
-type BatchTracker = ReturnType<typeof PerformanceMonitor.trackBatchOperation>;
+type BatchTracker = ReturnType<typeof trackBatchOperation>;
 
 /**
  * FileUploadProcessor - Handles uploading files to Pinata with rate limiting, error handling, and progress tracking.
@@ -41,9 +43,8 @@ type BatchTracker = ReturnType<typeof PerformanceMonitor.trackBatchOperation>;
  * - Ensure that the PinataConfig is correctly set up with your API credentials.
  * - The outputPath will contain a JSON mapping of file names to their corresponding IPFS CIDs after processing.
  */
-export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
+export class FileUploadProcessor extends BasePinataProcessor<UploadResult[]> {
   private readonly fileService = new FileService();
-  private readonly pinataService: PinataService;
   private readonly errorHandler: ErrorHandler;
 
   /**
@@ -52,8 +53,7 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
    * @param rateLimitConfig - Optional rate limiting configuration (default: 1 concurrent, 3s interval).
    */
   constructor(config: PinataConfig, rateLimitConfig: RateLimitConfig = { maxConcurrent: 1, minTime: 3000 }) {
-    super('FileUploadProcessor', rateLimitConfig);
-    this.pinataService = new PinataService(config);
+    super('FileUploadProcessor', config, rateLimitConfig);
     this.errorHandler = new ErrorHandler('FileUploadProcessor');
   }
 
@@ -63,34 +63,25 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
    * @returns Array of upload results.
    */
   public async process(options: ProcessingOptions): Promise<UploadResult[]> {
-    return PerformanceMonitor.monitorFunction(
-      'file-upload-process',
-      async () => {
-        this.validateOptions(options);
-        this.logProcessingStart(options);
+    return monitorFunction('file-upload-process', async () =>
+      this.executeProcessing(options, async () => {
+        const existingCIDs = await this.loadExistingCIDs();
+        const files = await this.collectFiles(options.folderPath);
 
-        try {
-          const existingCIDs = await this.loadExistingCIDs();
-          const files = await this.collectFiles(options.folderPath);
-
-          if (this.shouldShortCircuitForEmptyFolder(files, options.folderPath)) {
-            return [];
-          }
-
-          this.logUploadStart(files.length, options.folderPath);
-          const batchTracker = this.createBatchTracker(files.length);
-          const results = await this.executeUploads(files, existingCIDs, batchTracker);
-          const batchMetrics = batchTracker.complete();
-
-          await this.persistSuccessfulUploads(results, options.outputPath);
-          this.logCompletion(files.length, results, options.outputPath, batchMetrics);
-
-          return results;
-        } catch (error) {
-          throw this.handleProcessFailure(error, options);
+        if (this.shouldShortCircuitForEmptyFolder(files, options.folderPath)) {
+          return [];
         }
-      },
-      { folderPath: options.folderPath, outputPath: options.outputPath }
+
+        this.logUploadStart(files.length, options.folderPath);
+        const batchTracker = this.createBatchTracker(files.length);
+        const results = await this.executeUploads(files, existingCIDs, batchTracker);
+        const batchMetrics = batchTracker.complete();
+
+        await this.persistSuccessfulUploads(results, options.outputPath);
+        this.logCompletion(files.length, results, options.outputPath, batchMetrics);
+
+        return results;
+      })
     );
   }
 
@@ -100,7 +91,7 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
    */
   private async loadExistingCIDs(): Promise<FileMapping> {
     try {
-      return await this.fileService.readJson<FileMapping>('./output/downloaded-cids.json');
+      return await this.fileService.readJson<FileMapping>(OutputPaths.FILES.downloadedCids);
     } catch {
       this.logger.warn('No existing CID mappings found, starting fresh');
       return {};
@@ -156,7 +147,7 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
    * @returns Configured batch tracker instance.
    */
   private createBatchTracker(totalFiles: number): BatchTracker {
-    return PerformanceMonitor.trackBatchOperation('batch-file-upload', totalFiles, (processed, total) => {
+    return trackBatchOperation('batch-file-upload', totalFiles, (processed, total) => {
       if (processed % Math.max(1, Math.floor(total / 10)) === 0) {
         this.logger.info(`Upload progress: ${processed}/${total} files completed`, {
           processed,
@@ -209,7 +200,6 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
    */
   private logCompletion(totalFiles: number, results: UploadResult[], outputPath: string, batchMetrics: unknown): void {
     const { successCount, errorCount } = this.calculateOutcome(results);
-
     this.logger.info(
       'File upload process completed',
       {
@@ -224,25 +214,6 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
         metadata: this.buildOutcomeMetadata(totalFiles, successCount, errorCount),
       }
     );
-  }
-
-  /**
-   * Normalizes and rethrows a process-level failure.
-   * @param error - Error raised during processing.
-   * @param options - Processing options that were in effect.
-   * @returns Normalized processing error.
-   */
-  private handleProcessFailure(error: unknown, options: ProcessingOptions): ProcessingError {
-    const normalizedError = this.errorHandler.normalizeError(error, 'file-upload-process');
-    this.logger.error('File upload process failed', normalizedError, {
-      operation: 'file-upload-process',
-      metadata: {
-        errorCode: normalizedError.code,
-        folderPath: options.folderPath,
-        outputPath: options.outputPath,
-      },
-    });
-    return normalizedError;
   }
 
   /**
@@ -288,7 +259,6 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
     batchTracker: BatchTracker
   ): Promise<UploadResult> {
     const fileName = FileUtils.getFileName(filePath);
-
     try {
       const result = await this.processFileUpload(filePath, existingCIDs);
       return this.handleTrackedResult(result, batchTracker);
@@ -308,7 +278,6 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
       batchTracker.recordSuccess();
       return result;
     }
-
     batchTracker.recordError(new ProcessingError(result.error ?? 'Upload failed', ErrorCode.PROCESSING_FAILED));
     return result;
   }
@@ -327,7 +296,6 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
       success: false,
       error: error instanceof Error ? error.message : String(error),
     };
-
     batchTracker.recordError(error instanceof Error ? error : new Error(String(error)));
     return failure;
   }
@@ -340,8 +308,7 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
    */
   private async processFileUpload(filePath: string, existingCIDs: FileMapping): Promise<UploadResult> {
     const fileName = FileUtils.getFileName(filePath);
-
-    return PerformanceMonitor.monitorFunction(
+    return monitorFunction(
       'single-file-upload',
       async () => {
         const { exists, ipfsHash } = this.pinataService.checkFileExists(fileName, existingCIDs);
@@ -384,12 +351,7 @@ export class FileUploadProcessor extends BaseFileProcessor<UploadResult[]> {
             },
           });
 
-          return {
-            fileName,
-            cid: '',
-            success: false,
-            error: normalizedError.message,
-          };
+          return { fileName, cid: '', success: false, error: normalizedError.message };
         }
       },
       { fileName, filePath }

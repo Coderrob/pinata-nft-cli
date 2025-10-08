@@ -89,5 +89,13 @@ module.exports = {
         'default-param-last': 'off', // Allow default params for TypeScript constructors
       },
     },
+    // Tests: allow long test functions without triggering the project rule
+    {
+      files: ['**/*.test.ts', '**/*.spec.ts'],
+      rules: {
+        'max-lines-per-function': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+      },
+    },
   ],
 };

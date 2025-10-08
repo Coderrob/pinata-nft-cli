@@ -60,6 +60,7 @@ export interface PerformanceMetrics {
   readonly success: boolean;
   readonly itemsProcessed?: number;
   readonly errorCount?: number;
+  readonly successRate?: number;
   readonly timestamp: string;
 }
 
@@ -83,3 +84,15 @@ export interface HealthCheckResult {
   readonly details?: Record<string, unknown>;
   readonly error?: string;
 }
+
+/**
+ * System snapshot for health monitoring
+ */
+export type SystemSnapshot = {
+  totalMemory: number;
+  freeMemory: number;
+  memoryUsagePercent: number;
+  loadAverage: number[];
+  cpuCount: number;
+  diskSpaceAvailable: boolean;
+};

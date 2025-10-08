@@ -18,17 +18,79 @@
 
 import { Command } from 'commander';
 
-import { CommandOptions, PinataConfig, RateLimitConfig } from '../types';
-import { isDefined, isNonEmptyString, isNumberInRange, Logger } from '../utils';
+import { CommandOptions, PinataConfig, RateLimitConfig, ILogger, IConfigProvider, IErrorHandler } from '../types';
+import { isDefined, isNonEmptyString, isNumberInRange } from '../utils';
+
+/**
+ * Default logger implementation
+ */
+export class Logger implements ILogger {
+  constructor(private readonly context: string) {}
+
+  info(message: string, ...args: unknown[]): void {
+    console.log(`[${new Date().toISOString()}] [INFO] [${this.context}] ${message}`, ...args);
+  }
+
+  warn(message: string, ...args: unknown[]): void {
+    console.warn(`[${new Date().toISOString()}] [WARN] [${this.context}] ${message}`, ...args);
+  }
+
+  error(message: string, error?: unknown): void {
+    console.error(`[${new Date().toISOString()}] [ERROR] [${this.context}] ${message}`, error);
+  }
+
+  debug(message: string, ...args: unknown[]): void {
+    console.debug(`[${new Date().toISOString()}] [DEBUG] [${this.context}] ${message}`, ...args);
+  }
+}
+
+/**
+ * Default configuration provider implementation
+ */
+export class ConfigProvider implements IConfigProvider {
+  getPinataConfig(): PinataConfig {
+    const apiKey = process.env.PINATA_API_KEY;
+    const apiSecret = process.env.PINATA_API_SECRET;
+
+    if (!isNonEmptyString(apiKey) || !isNonEmptyString(apiSecret)) {
+      throw new Error('PINATA_API_KEY and PINATA_API_SECRET environment variables are required');
+    }
+
+    return { apiKey, apiSecret };
+  }
+}
+
+/**
+ * Default error handler implementation
+ */
+export class ErrorHandler implements IErrorHandler {
+  handleError(error: unknown): void {
+    console.error('Command execution failed', error);
+    process.exit(1);
+  }
+}
 
 export abstract class BaseCommand {
-  protected readonly logger: Logger;
+  protected readonly command: Command;
+  protected readonly logger: ILogger;
+  protected readonly configProvider: IConfigProvider;
+  protected readonly errorHandler: IErrorHandler;
+  protected readonly commandName: string;
+  protected readonly description: string;
 
   constructor(
-    public readonly commandName: string,
-    public readonly description?: string
+    commandName: string,
+    description: string,
+    logger: ILogger = new Logger(commandName),
+    configProvider: IConfigProvider = new ConfigProvider(),
+    errorHandler: IErrorHandler = new ErrorHandler()
   ) {
-    this.logger = new Logger(commandName);
+    this.commandName = commandName;
+    this.description = description;
+    this.command = new Command(commandName).description(description);
+    this.logger = logger;
+    this.configProvider = configProvider;
+    this.errorHandler = errorHandler;
   }
 
   /**
@@ -42,14 +104,7 @@ export abstract class BaseCommand {
    * @returns Pinata configuration object
    */
   protected getPinataConfig(): PinataConfig {
-    const apiKey = process.env.PINATA_API_KEY;
-    const apiSecret = process.env.PINATA_API_SECRET;
-
-    if (!isNonEmptyString(apiKey) || !isNonEmptyString(apiSecret)) {
-      throw new Error('PINATA_API_KEY and PINATA_API_SECRET environment variables are required');
-    }
-
-    return { apiKey, apiSecret };
+    return this.configProvider.getPinataConfig();
   }
 
   /**
@@ -80,16 +135,15 @@ export abstract class BaseCommand {
    * @param error - The error that occurred
    */
   protected handleError(error: unknown): void {
-    this.logger.error('Command execution failed', error);
-    process.exit(1);
+    this.errorHandler.handleError(error);
   }
 
   /**
    * Logs command completion
    * @param message - Completion message
    */
-  protected logSuccess(message: string): void {
-    this.logger.info(`[OK] ${message}`);
+  protected logSuccess(message: string, ...args: unknown[]): void {
+    this.logger.info(message, ...args);
   }
 
   /**

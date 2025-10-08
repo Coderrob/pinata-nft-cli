@@ -16,6 +16,7 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+import { OutputPaths } from '../../config';
 import { PathOptions } from './path.options';
 
 describe('PathOptions', () => {
@@ -23,7 +24,7 @@ describe('PathOptions', () => {
     it('should have correct flags, description, and default', () => {
       expect(PathOptions.folder.flags).toBe('-f, --folder <path>');
       expect(PathOptions.folder.description).toBe('Folder path containing files to process');
-      expect(PathOptions.folder.defaultValue).toBe('files');
+      expect(PathOptions.folder.defaultValue).toBe('files'); // From AppConfig.getFileProcessingConfig().defaultInputFolder
     });
   });
 
@@ -62,7 +63,7 @@ describe('PathOptions', () => {
     it('should have correct flags, description, and default', () => {
       expect(PathOptions.metadataFolder.flags).toBe('-f, --folder <path>');
       expect(PathOptions.metadataFolder.description).toBe('Folder path to upload');
-      expect(PathOptions.metadataFolder.defaultValue).toBe('metadata');
+      expect(PathOptions.metadataFolder.defaultValue).toBe('metadata'); // From AppConfig.getFileProcessingConfig().defaultMetadataFolder
     });
   });
 
@@ -70,7 +71,7 @@ describe('PathOptions', () => {
     it('should have correct flags, description, and default', () => {
       expect(PathOptions.finalOutput.flags).toBe('--final-output <path>');
       expect(PathOptions.finalOutput.description).toBe('Output path for hash of hashes');
-      expect(PathOptions.finalOutput.defaultValue).toBe('./output/file-hashOfHashes.json');
+      expect(PathOptions.finalOutput.defaultValue).toBe(OutputPaths.FILES.hashOfHashes);
     });
   });
 });
