@@ -1,0 +1,13 @@
+{
+  "attributes": [
+    {
+      "trait_type": "Number",
+      "value": "One"
+    }
+  ],
+  "description": "The number 1.",
+  "fee_recipient": "",
+  "image": "ipfs://QmZPnX4481toHABEtvKFoCWoVuzFFQRBiA5QR2Cij9pjon",
+  "name": "#1",
+  "seller_fee_basis_points": 400
+}

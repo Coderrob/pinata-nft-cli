@@ -1,0 +1,112 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "pinata-cli: cid (calculate file CIDs)",
+      "outputCapture": "std",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "cid",
+        "--folder",
+        "./__tests__/files",
+        "--output",
+        "./output/test-file-cids.json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "pinata-cli: hash (calculate SHA-256 hashes)",
+      "outputCapture": "std",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "hash",
+        "--folder",
+        "./__tests__/files",
+        "--output",
+        "./output/test-file-hashes.json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "pinata-cli: download (download CID mappings)",
+      "outputCapture": "std",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "download",
+        "--output",
+        "./output/test-downloaded-cids.json",
+        "--status",
+        "all"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "pinata-cli: upload files (upload individual files)",
+      "outputCapture": "std",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "upload",
+        "files",
+        "--folder",
+        "./__tests__/files",
+        "--output",
+        "./output/test-uploaded-files.json",
+        "--concurrent",
+        "2"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "pinata-cli: upload folder (upload an entire folder)",
+      "outputCapture": "std",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "upload",
+        "folder",
+        "--folder",
+        "./__tests__/files",
+        "--output",
+        "./output/test-uploaded-folder.json"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}
