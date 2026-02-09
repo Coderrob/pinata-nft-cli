@@ -5,7 +5,7 @@
   },
   "dependencies": {
     "@pinata/sdk": "^2.1.0",
-    "axios": "^1.12.2",
+    "axios": "^1.13.5",
     "base-path-converter": "^1.0.2",
     "bottleneck": "^2.19.5",
     "commander": "^14.0.1",
